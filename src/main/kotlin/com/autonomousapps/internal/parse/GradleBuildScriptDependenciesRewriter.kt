@@ -27,7 +27,7 @@ internal class GradleBuildScriptDependenciesRewriter private constructor(
   private val advice: Set<Advice>,
   /** Reverse map from custom representation to standard. */
   private val reversedDependencyMap: (String) -> String,
-) : GradleScriptBaseListener() {
+) : BuildScriptDependenciesRewriter, GradleScriptBaseListener() {
 
   private class RewriterErrorListener : AbstractErrorListener() {
     val errorMessages = mutableListOf<String>()
@@ -76,7 +76,7 @@ internal class GradleBuildScriptDependenciesRewriter private constructor(
   private var inBuildscriptBlock = false
 
   @Throws(BuildScriptParseException::class)
-  fun rewritten(): String {
+  override fun rewritten(): String {
     errorListener.errorMessages.ifNotEmpty {
       throw BuildScriptParseException.withErrors(errorListener.errorMessages)
     }
