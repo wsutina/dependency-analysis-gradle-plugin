@@ -404,6 +404,87 @@ internal class KotlinBuildScriptDependenciesRewriterTest {
     )
   }
 
+  @Test fun `only removes dependencies on expected configuration`() {
+    // Given
+    val sourceFile = dir.resolve("build.gradle.kts")
+    sourceFile.writeText(
+      """
+        plugins {
+          id("foo")
+        }
+
+        repositories {
+          google()
+          mavenCentral()
+        }
+
+        apply(plugin = "bar")
+
+        extra["magic"] = 42
+
+        android {
+          whatever
+        }
+
+        dependencies {
+          implementation("heart:of-gold:1.+")
+          api(project(":marvin"))
+          testImplementation("pan-galactic:gargle-blaster:2.0-SNAPSHOT") {
+              because("life's too short not to")
+          }
+        }
+
+        println("hello, world!")
+      """.trimIndent()
+    )
+
+    val advice = setOf(
+      Advice.ofChange(Coordinates.of(":marvin"), "api", "compileOnly"),
+      Advice.ofRemove(Coordinates.of("pan-galactic:gargle-blaster:2.0-SNAPSHOT"), "implementation"),
+      Advice.ofAdd(Coordinates.of(":sad-robot"), "runtimeOnly"),
+    )
+
+    // When
+    val parser = KotlinBuildScriptDependenciesRewriter.of(
+      sourceFile,
+      advice,
+      AdvicePrinter(DslKind.KOTLIN),
+    )
+
+    // Then
+    assertThat(parser.rewritten().trimmedLines()).containsExactlyElementsIn(
+      """
+        plugins {
+          id("foo")
+        }
+
+        repositories {
+          google()
+          mavenCentral()
+        }
+
+        apply(plugin = "bar")
+
+        extra["magic"] = 42
+
+        android {
+          whatever
+        }
+
+        dependencies {
+          implementation("heart:of-gold:1.+")
+          compileOnly(project(":marvin"))
+          runtimeOnly(project(":sad-robot"))
+          testImplementation("pan-galactic:gargle-blaster:2.0-SNAPSHOT") {
+              because("life's too short not to")
+          }
+        }
+
+        println("hello, world!")
+      """.trimIndent().trimmedLines()
+    )
+  }
+
   private fun Path.writeText(text: String): Path = Files.writeString(this, text)
   private fun String.trimmedLines() = lines().map { it.trimEnd() }
 }
