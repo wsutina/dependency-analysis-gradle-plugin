@@ -340,6 +340,70 @@ internal class KotlinBuildScriptDependenciesRewriterTest {
     ).inOrder()
   }
 
+  @Test fun `can add dependencies to build script that didn't have a dependencies block`() {
+    // Given
+    val sourceFile = dir.resolve("build.gradle.kts")
+    sourceFile.writeText(
+      """
+        plugins {
+          id("foo")
+        }
+
+        repositories {
+          google()
+          mavenCentral()
+        }
+
+        apply(plugin = "bar")
+
+        extra["magic"] = 42
+
+        android {
+          whatever
+        }
+      """.trimIndent()
+    )
+
+    val advice = setOf(
+      Advice.ofChange(Coordinates.of(":marvin"), "api", "compileOnly"),
+      Advice.ofRemove(Coordinates.of("pan-galactic:gargle-blaster:2.0-SNAPSHOT"), "testImplementation"),
+      Advice.ofAdd(Coordinates.of(":sad-robot"), "runtimeOnly"),
+    )
+
+    // When
+    val parser = KotlinBuildScriptDependenciesRewriter.of(
+      sourceFile,
+      advice,
+      AdvicePrinter(DslKind.KOTLIN),
+    )
+
+    // Then
+    assertThat(parser.rewritten().trimmedLines()).containsExactlyElementsIn(
+      """
+        plugins {
+          id("foo")
+        }
+
+        repositories {
+          google()
+          mavenCentral()
+        }
+
+        apply(plugin = "bar")
+
+        extra["magic"] = 42
+
+        android {
+          whatever
+        }
+
+        dependencies {
+          runtimeOnly(project(":sad-robot"))
+        }
+      """.trimIndent().trimmedLines()
+    )
+  }
+
   private fun Path.writeText(text: String): Path = Files.writeString(this, text)
   private fun String.trimmedLines() = lines().map { it.trimEnd() }
 }
