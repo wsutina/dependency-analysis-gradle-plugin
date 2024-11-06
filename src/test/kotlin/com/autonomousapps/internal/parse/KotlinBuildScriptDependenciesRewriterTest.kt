@@ -310,6 +310,36 @@ internal class KotlinBuildScriptDependenciesRewriterTest {
     )
   }
 
+  @Test fun `can handle testFixtures`() {
+    // Given
+    val sourceFile = dir.resolve("build.gradle.kts")
+    sourceFile.writeText(
+      """
+        dependencies {
+          implementation("heart:of-gold:1.+")
+          implementation(testFixtures(project(":foo")))
+        }
+      """.trimIndent()
+    )
+
+    // When
+    val parser = KotlinBuildScriptDependenciesRewriter.of(
+      sourceFile,
+      emptySet(),
+      AdvicePrinter(DslKind.KOTLIN),
+    )
+
+    // Then
+    assertThat(parser.rewritten().trimmedLines()).containsExactlyElementsIn(
+      """
+        dependencies {
+          implementation("heart:of-gold:1.+")
+          implementation(testFixtures(project(":foo")))
+        }
+      """.trimIndent().trimmedLines()
+    ).inOrder()
+  }
+
   private fun Path.writeText(text: String): Path = Files.writeString(this, text)
   private fun String.trimmedLines() = lines().map { it.trimEnd() }
 }
