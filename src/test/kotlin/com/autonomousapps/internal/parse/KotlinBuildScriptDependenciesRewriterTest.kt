@@ -93,6 +93,112 @@ internal class KotlinBuildScriptDependenciesRewriterTest {
     )
   }
 
+  @Test fun `can update dependencies with dependencyMap`() {
+    // Given
+    val sourceFile = dir.resolve("build.gradle.kts")
+    sourceFile.writeText(
+      """
+        import foo
+        import bar
+
+        plugins {
+          id("foo")
+        }
+
+        repositories {
+          google()
+          mavenCentral()
+        }
+
+        apply(plugin = "bar")
+
+        extra["magic"] = 42
+
+        android {
+          whatever
+        }
+
+        dependencies {
+          implementation("heart:of-gold:1.+")
+          api(project(":marvin"))
+          api(libs.fordPrefect)
+          testImplementation("pan-galactic:gargle-blaster:2.0-SNAPSHOT") {
+              because("life's too short not to")
+          }
+        }
+
+        println("hello, world!")
+      """.trimIndent()
+    )
+    val advice = setOf(
+      Advice.ofChange(Coordinates.of(":marvin"), "api", "compileOnly"),
+      Advice.ofChange(Coordinates.of("ford:prefect:1.0"), "api", "implementation"),
+      Advice.ofRemove(Coordinates.of("pan-galactic:gargle-blaster:2.0-SNAPSHOT"), "testImplementation"),
+      Advice.ofAdd(Coordinates.of(":sad-robot"), "runtimeOnly"),
+      Advice.ofAdd(Coordinates.of("magrathea:asleep:1000000"), "implementation"),
+    )
+
+    // When
+    val parser = KotlinBuildScriptDependenciesRewriter.of(
+      sourceFile,
+      advice,
+      AdvicePrinter(
+        dslKind = DslKind.KOTLIN,
+        dependencyMap = {
+          when (it) {
+            ":sad-robot" -> "\":depressed-robot\""
+            "magrathea:asleep:1000000" -> "deps.magrathea"
+            "ford:prefect" -> "libs.fordPrefect"
+            else -> it
+          }
+        }
+      ),
+      reversedDependencyMap = {
+        when (it) {
+          "\":depressed-robot\"" -> ":sad-robot"
+          "deps.magrathea" -> "magrathea:asleep:1000000"
+          "libs.fordPrefect" -> "ford:prefect"
+          else -> it
+        }
+      }
+    )
+
+    // Then
+    assertThat(parser.rewritten().trimmedLines()).containsExactlyElementsIn(
+      """
+        import foo
+        import bar
+
+        plugins {
+          id("foo")
+        }
+
+        repositories {
+          google()
+          mavenCentral()
+        }
+
+        apply(plugin = "bar")
+
+        extra["magic"] = 42
+
+        android {
+          whatever
+        }
+
+        dependencies {
+          implementation("heart:of-gold:1.+")
+          compileOnly(project(":marvin"))
+          implementation(libs.fordPrefect)
+          implementation(deps.magrathea)
+          runtimeOnly(project(":depressed-robot"))
+        }
+
+        println("hello, world!")
+      """.trimIndent().trimmedLines()
+    )
+  }
+
   @Test fun `ignores buildscript dependencies`() {
     // Given
     val sourceFile = dir.resolve("build.gradle.kts")
