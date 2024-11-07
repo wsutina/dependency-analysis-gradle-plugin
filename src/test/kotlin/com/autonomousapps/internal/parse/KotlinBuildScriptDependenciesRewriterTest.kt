@@ -485,6 +485,45 @@ internal class KotlinBuildScriptDependenciesRewriterTest {
     )
   }
 
+  @Test fun `can parse complex dependencies`() {
+    // Given
+    val sourceFile = dir.resolve("build.gradle.kts")
+
+    sourceFile.writeText(
+      """
+      dependencies {
+        if (true) {
+          testImplementation("heart:of-gold:1.+") // stay as is
+        }
+
+        testImplementation("heart:of-gold:1.+")
+        devImplementation(group = "io.netty", name = "netty-transport-native-unix-common", classifier = "osx-aarch_64")
+      }
+      """.trimIndent())
+
+    val advice = setOf(Advice(Coordinates.of("heart:of-gold:1.+"), "testImplementation", "implementation"))
+    // When
+    val parser = KotlinBuildScriptDependenciesRewriter.of(
+      sourceFile,
+      advice,
+      AdvicePrinter(DslKind.KOTLIN),
+    )
+
+    // Then
+    assertThat(parser.rewritten().trimmedLines()).containsExactlyElementsIn(
+      """
+      dependencies {
+        if (true) {
+          testImplementation("heart:of-gold:1.+") // stay as is
+        }
+
+        implementation("heart:of-gold:1.+")
+        devImplementation(group = "io.netty", name = "netty-transport-native-unix-common", classifier = "osx-aarch_64")
+      }
+      """.trimIndent().trimmedLines()
+    ).inOrder()
+  }
+
   private fun Path.writeText(text: String): Path = Files.writeString(this, text)
   private fun String.trimmedLines() = lines().map { it.trimEnd() }
 }
