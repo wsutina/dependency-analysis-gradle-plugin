@@ -10,7 +10,7 @@ import com.autonomousapps.grammar.gradle.GradleScriptLexer
 import com.autonomousapps.internal.advice.AdvicePrinter
 import com.autonomousapps.internal.antlr.v4.runtime.*
 import com.autonomousapps.internal.antlr.v4.runtime.tree.ParseTreeWalker
-import com.autonomousapps.internal.parse.GradleBuildScriptDependenciesRewriter.CtxDependency.DependencyKind
+import com.autonomousapps.internal.parse.GroovyBuildScriptDependenciesRewriter.CtxDependency.DependencyKind
 import com.autonomousapps.internal.utils.filterToOrderedSet
 import com.autonomousapps.internal.utils.filterToSet
 import com.autonomousapps.internal.utils.ifNotEmpty
@@ -19,7 +19,7 @@ import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.StandardOpenOption
 
-internal class GradleBuildScriptDependenciesRewriter private constructor(
+internal class GroovyBuildScriptDependenciesRewriter private constructor(
   private val tokens: CommonTokenStream,
   private val rewriter: TokenStreamRewriter,
   private val errorListener: RewriterErrorListener,
@@ -195,7 +195,7 @@ internal class GradleBuildScriptDependenciesRewriter private constructor(
       advice: Set<Advice>,
       advicePrinter: AdvicePrinter,
       reversedDependencyMap: (String) -> String = { it },
-    ): GradleBuildScriptDependenciesRewriter {
+    ): GroovyBuildScriptDependenciesRewriter {
       val input = Files.newInputStream(file, StandardOpenOption.READ).use { CharStreams.fromStream(it) }
       val lexer = GradleScriptLexer(input)
       val tokens = CommonTokenStream(lexer)
@@ -205,7 +205,7 @@ internal class GradleBuildScriptDependenciesRewriter private constructor(
       parser.addErrorListener(errorListener)
 
       val walker = ParseTreeWalker()
-      val listener = GradleBuildScriptDependenciesRewriter(
+      val listener = GroovyBuildScriptDependenciesRewriter(
         tokens = tokens,
         rewriter = TokenStreamRewriter(tokens),
         errorListener = errorListener,
