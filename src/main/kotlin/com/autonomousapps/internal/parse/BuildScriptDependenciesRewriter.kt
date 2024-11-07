@@ -20,7 +20,7 @@ internal interface BuildScriptDependenciesRewriter {
 
       return when (dslKind) {
         DslKind.KOTLIN -> KotlinBuildScriptDependenciesRewriter.of(filePath, advice, advicePrinter, reversedDependencyMap)
-        DslKind.GROOVY -> GradleBuildScriptDependenciesRewriter.newRewriter(filePath, advice, advicePrinter, reversedDependencyMap)
+        DslKind.GROOVY -> GradleBuildScriptDependenciesRewriter.of(filePath, advice, advicePrinter, reversedDependencyMap)
       }
     }
   }

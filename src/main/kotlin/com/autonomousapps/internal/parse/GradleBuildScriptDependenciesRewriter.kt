@@ -190,7 +190,7 @@ internal class GradleBuildScriptDependenciesRewriter private constructor(
   }
 
   internal companion object {
-    fun newRewriter(
+    fun of(
       file: Path,
       advice: Set<Advice>,
       advicePrinter: AdvicePrinter,
