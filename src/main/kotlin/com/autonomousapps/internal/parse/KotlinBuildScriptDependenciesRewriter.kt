@@ -1,7 +1,6 @@
 package com.autonomousapps.internal.parse
 
 import cash.grammar.kotlindsl.model.DependencyDeclaration
-import cash.grammar.kotlindsl.parse.KotlinParseException
 import cash.grammar.kotlindsl.parse.Parser
 import cash.grammar.kotlindsl.parse.Rewriter
 import cash.grammar.kotlindsl.utils.Blocks.isBuildscript
@@ -22,6 +21,7 @@ import com.squareup.cash.grammar.KotlinParser.ScriptContext
 import com.squareup.cash.grammar.KotlinParserBaseListener
 import org.antlr.v4.runtime.CharStream
 import org.antlr.v4.runtime.CommonTokenStream
+import org.antlr.v4.runtime.Token
 import java.nio.file.Path
 
 /**
@@ -82,32 +82,34 @@ internal class KotlinBuildScriptDependenciesRewriter(
   }
 
   override fun exitNamedBlock(ctx: NamedBlockContext) {
-    dependencyExtractor.onExitBlock()
-
     if (ctx.isDependencies && !inBuildscriptBlock) {
       hasDependenciesBlock = true
-      advice.filterToSet { it.isAnyAdd() }.ifNotEmpty { addAdvice ->
-        val closeBrace = ctx.stop
-        rewriter.insertBefore(closeBrace, addAdvice.joinToString(separator = "\n", postfix = "\n") { a ->
-          printer.toDeclaration(a)
-        })
-      }
+      insertAdvice(advice, ctx.stop, withDependenciesBlock = false)
     }
 
     // Must be last
     if (ctx.isBuildscript) {
       inBuildscriptBlock = false
     }
+
+    dependencyExtractor.onExitBlock()
   }
 
   override fun exitScript(ctx: ScriptContext) {
     // Exit early if this build script has a dependencies block. If it doesn't, we may need to add missing dependencies.
     if (hasDependenciesBlock) return
 
+    insertAdvice(advice, ctx.stop, withDependenciesBlock = true)
+  }
+
+  private fun insertAdvice(advice: Set<Advice>, beforeToken: Token, withDependenciesBlock: Boolean) {
+    val prefix = if (withDependenciesBlock) "\ndependencies {\n" else ""
+    val postfix = if (withDependenciesBlock) "\n}\n" else "\n"
+
     advice.filterToOrderedSet { it.isAnyAdd() }.ifNotEmpty { addAdvice ->
       rewriter.insertBefore(
-        ctx.stop,
-        addAdvice.joinToString(prefix = "\ndependencies {\n", postfix = "\n}\n", separator = "\n") { a ->
+        beforeToken,
+        addAdvice.joinToString(prefix = prefix, postfix = postfix, separator = "\n") { a ->
           printer.toDeclaration(a)
         }
       )
