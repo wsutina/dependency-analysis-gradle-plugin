@@ -130,6 +130,7 @@ internal class KotlinBuildScriptDependenciesRewriterTest {
         println("hello, world!")
       """.trimIndent()
     )
+
     val advice = setOf(
       Advice.ofChange(Coordinates.of(":marvin"), "api", "compileOnly"),
       Advice.ofChange(Coordinates.of("ford:prefect:1.0"), "api", "implementation"),
@@ -149,7 +150,7 @@ internal class KotlinBuildScriptDependenciesRewriterTest {
             ":sad-robot" -> "\":depressed-robot\""
             "magrathea:asleep:1000000" -> "deps.magrathea"
             "ford:prefect" -> "libs.fordPrefect"
-            else -> it
+            else -> null
           }
         }
       ),

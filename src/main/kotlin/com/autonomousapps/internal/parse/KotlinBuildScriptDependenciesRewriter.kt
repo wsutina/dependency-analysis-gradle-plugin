@@ -132,8 +132,7 @@ internal class KotlinBuildScriptDependenciesRewriter(
           rewriter.deleteWhitespaceToLeft(context.start)
           rewriter.deleteNewlineToRight(context.stop)
         } else if (a.isAnyChange()) {
-          val configuration = context.primaryExpression()
-          rewriter.replace(configuration.start, configuration.stop, a.toConfiguration)
+          rewriter.replace(context.start, context.stop, printer.toDeclaration(a).trim())
         }
       }
     }
